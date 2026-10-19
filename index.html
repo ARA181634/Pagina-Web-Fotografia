@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Un archivo fotográfico personal." />
+    <title>Luz & Archivo — Fotografía</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="#inicio" aria-label="Luz y Archivo, inicio">Luz <span>&</span> Archivo</a>
+      <nav aria-label="Navegación principal">
+        <a href="#inicio" class="active">Archivo</a>
+        <a href="#categorias">Categorías</a>
+        <button class="text-button" id="admin-button" type="button">Administrar</button>
+      </nav>
+    </header>
+
+    <main id="inicio">
+      <section class="intro">
+        <p class="kicker">Diario visual</p>
+        <h1>Historias contadas<br />a través de la luz.</h1>
+        <p class="lede">Un archivo vivo de fotografías, lugares y momentos.</p>
+      </section>
+
+      <section id="categorias" class="category-bar" aria-label="Filtrar por categoría">
+        <button class="category active" data-tag="all" type="button">Todas <span id="photo-count">0</span></button>
+        <div id="tag-list"></div>
+      </section>
+
+      <section class="gallery-section" aria-label="Galería de fotografías">
+        <div id="empty-state" class="empty-state">
+          <p class="kicker">El archivo comienza aquí</p>
+          <h2>Aún no hay fotografías.</h2>
+          <p>Abre Administrar para subir tu primera imagen.</p>
+          <button class="primary-button" id="empty-upload" type="button">Subir fotografías</button>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+    </main>
+
+    <aside class="admin-panel" id="admin-panel" aria-hidden="true">
+      <div class="admin-heading">
+        <div>
+          <p class="kicker">Panel privado</p>
+          <h2>Administrar archivo</h2>
+        </div>
+        <button class="icon-button" id="close-admin" type="button" aria-label="Cerrar administración">×</button>
+      </div>
+      <div class="admin-tabs" role="tablist">
+        <button class="tab active" data-tab="upload" type="button">Subir</button>
+        <button class="tab" data-tab="organize" type="button">Organizar</button>
+      </div>
+      <section class="tab-content" id="upload-tab">
+        <label for="file-input" class="drop-zone" id="drop-zone">
+          <strong>Arrastra tus fotografías aquí</strong>
+          <span>o elige archivos desde tu equipo</span>
+          <small>JPG, PNG, WebP o AVIF · se conserva el original</small>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple />
+        </label>
+        <div id="upload-queue" class="upload-queue"></div>
+      </section>
+      <section class="tab-content hidden" id="organize-tab">
+        <form id="tag-form" class="tag-form">
+          <label for="new-tag">Nueva etiqueta</label>
+          <div><input id="new-tag" maxlength="30" placeholder="Ej. Retrato" /><button class="primary-button" type="submit">Crear</button></div>
+        </form>
+        <div id="admin-tags" class="admin-tags"></div>
+        <p class="note">Las etiquetas se aplican al editar cada fotografía.</p>
+      </section>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <dialog id="photo-dialog">
+      <button class="dialog-close" id="dialog-close" type="button" aria-label="Cerrar">×</button>
+      <img id="dialog-image" alt="" />
+      <div class="dialog-copy"><p class="kicker" id="dialog-tags"></p><h2 id="dialog-title"></h2><p id="dialog-caption"></p></div>
+    </dialog>
+
+    <dialog id="edit-dialog">
+      <form id="edit-form" method="dialog">
+        <div class="dialog-header"><h2>Editar fotografía</h2><button class="dialog-close" id="edit-close" type="button" aria-label="Cerrar">×</button></div>
+        <label>Título<input id="edit-title" maxlength="80" required /></label>
+        <label>Pie de imagen<textarea id="edit-caption" maxlength="300" rows="4" placeholder="Añade el contexto de esta fotografía"></textarea></label>
+        <fieldset><legend>Etiquetas</legend><div id="edit-tags" class="check-tags"></div></fieldset>
+        <div class="edit-actions"><button type="button" id="delete-photo" class="danger-button">Eliminar</button><button type="submit" class="primary-button">Guardar cambios</button></div>
+      </form>
+    </dialog>
+    <template id="photo-template"><article class="photo-card"><button class="image-button" type="button"><img loading="lazy" alt="" /></button><div class="photo-meta"><p class="photo-tags"></p><h2></h2><p class="caption"></p><button class="edit-button" type="button">Editar</button></div></article></template>
+    <script src="app.js"></script>
+  </body>
+</html>
