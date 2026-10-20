@@ -12,10 +12,17 @@ let editingId = null;
 let isOwner = false;
 let isRecoveringPassword = false;
 
+function setSessionStatus(message, type = '') {
+  const element = $('#admin-session-status');
+  element.textContent = message;
+  element.className = `session-status ${type}`.trim();
+}
+
 async function checkOwner(session) {
   isOwner = false;
   let permissionError = null;
   if (session?.user) {
+    setSessionStatus(`Sesión iniciada como ${session.user.email}. Comprobando permiso de administrador…`);
     const { data, error } = await supabase.rpc('is_site_owner');
     permissionError = error?.message || null;
     isOwner = !permissionError && data === true;
@@ -24,9 +31,20 @@ async function checkOwner(session) {
   $('#login-form').classList.toggle('hidden', isOwner || isRecoveringPassword);
   $('#recovery-form').classList.toggle('hidden', !isRecoveringPassword);
   $('#owner-tools').classList.toggle('hidden', !isOwner);
-  if (session?.user && permissionError) $('#login-message').textContent = `La sesión inició, pero Supabase no pudo comprobar permisos: ${permissionError}`;
-  else if (session?.user && !isOwner) $('#login-message').textContent = `La sesión inició, pero el UUID ${session.user.id} no está autorizado en site_admins.`;
-  if (isOwner) $('#login-message').textContent = '';
+  if (!session?.user) {
+    setSessionStatus('Sin sesión. Inicia sesión con la cuenta administradora.');
+  } else if (permissionError) {
+    const message = `Sesión iniciada como ${session.user.email}, pero Supabase no pudo comprobar permisos: ${permissionError}`;
+    setSessionStatus(message, 'error');
+    $('#login-message').textContent = message;
+  } else if (!isOwner) {
+    const message = `Sesión iniciada como ${session.user.email}, pero el UUID ${session.user.id} no está autorizado en site_admins.`;
+    setSessionStatus(message, 'error');
+    $('#login-message').textContent = message;
+  } else {
+    setSessionStatus(`Administrador autorizado: ${session.user.email}`, 'success');
+    $('#login-message').textContent = '';
+  }
   await load();
 }
 
@@ -211,8 +229,13 @@ document.addEventListener('click', (event) => {
 $('#login-form').onsubmit = async (event) => {
   event.preventDefault();
   showMessage('Iniciando sesión…');
+  setSessionStatus('Verificando correo y contraseña…');
   const { error } = await supabase.auth.signInWithPassword({ email: $('#login-email').value.trim(), password: $('#login-password').value });
-  if (error) showMessage(`No se pudo iniciar sesión: ${error.message}`);
+  if (error) {
+    const message = `No se pudo iniciar sesión: ${error.message}`;
+    showMessage(message);
+    setSessionStatus(message, 'error');
+  }
   else await checkOwner((await supabase.auth.getSession()).data.session);
 };
 

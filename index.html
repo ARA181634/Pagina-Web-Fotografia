@@ -48,6 +48,7 @@
         </div>
         <button class="icon-button" id="close-admin" type="button" aria-label="Cerrar administración">×</button>
       </div>
+      <div id="admin-session-status" class="session-status" role="status">Comprobando sesión…</div>
       <form id="login-form" class="login-form">
         <p>Inicia sesión con la cuenta autorizada en Supabase.</p>
         <label for="login-email">Correo electrónico</label>
@@ -123,8 +124,14 @@
       document.getElementById('empty-upload').addEventListener('click', () => toggleAdminPanel(true));
       document.getElementById('close-admin').addEventListener('click', () => toggleAdminPanel(false));
       adminScrim.addEventListener('click', () => toggleAdminPanel(false));
+      document.getElementById('login-form').addEventListener('submit', (event) => {
+        if (!window.supabase) {
+          event.preventDefault();
+          document.getElementById('admin-session-status').textContent = 'No se pudo cargar la conexión con Supabase. Recarga la página y revisa que el navegador no bloquee cdn.jsdelivr.net.';
+        }
+      });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-    <script src="app.js?v=20261019-3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" onerror="document.getElementById('admin-session-status').textContent='No se pudo cargar la biblioteca de Supabase desde cdn.jsdelivr.net.'"></script>
+    <script src="app.js?v=20261019-4"></script>
   </body>
 </html>
