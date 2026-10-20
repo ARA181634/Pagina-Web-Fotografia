@@ -130,8 +130,16 @@ function render() {
   gallery.innerHTML = '';
   visible.forEach((photo) => {
     const template = $('#photo-template').content.cloneNode(true);
+    const card = template.querySelector('.photo-card');
     const image = template.querySelector('img');
-    image.src = photo.assets.find((asset) => asset.kind === 'medium')?.url || photo.assets[0]?.url || '';
+    const displayAsset = photo.assets.find((asset) => asset.kind === 'medium' && asset.url) || photo.assets.find((asset) => asset.url);
+    card.classList.add('is-loading');
+    if (displayAsset?.width && displayAsset?.height) image.style.aspectRatio = `${displayAsset.width} / ${displayAsset.height}`;
+    const finishLoading = () => card.classList.remove('is-loading');
+    image.addEventListener('load', finishLoading, { once: true });
+    image.addEventListener('error', finishLoading, { once: true });
+    image.src = displayAsset?.url || '';
+    if (image.complete && image.naturalWidth) requestAnimationFrame(finishLoading);
     image.alt = photo.title;
     template.querySelector('h2').textContent = photo.title;
     template.querySelector('.caption').textContent = photo.caption;
@@ -164,19 +172,31 @@ function showMessage(message) {
 }
 
 async function openPhoto(photo) {
-  const preferred = photo.assets.find((asset) => asset.kind === 'large') || photo.assets.find((asset) => asset.kind === 'medium');
-  let imageUrl = preferred?.url || '';
-  if (preferred && !imageUrl) {
-    const signed = await signedAsset(preferred);
-    imageUrl = signed?.url || '';
-    if (imageUrl) preferred.url = imageUrl;
-  }
-  $('#dialog-image').src = imageUrl;
+  const large = photo.assets.find((asset) => asset.kind === 'large');
+  const medium = photo.assets.find((asset) => asset.kind === 'medium' && asset.url) || photo.assets.find((asset) => asset.url);
+  const dialog = $('#photo-dialog');
+  const dialogImage = $('#dialog-image');
+  dialogImage.src = large?.url || medium?.url || '';
   $('#dialog-image').alt = photo.title;
   $('#dialog-title').textContent = photo.title;
   $('#dialog-caption').textContent = photo.caption;
   $('#dialog-tags').textContent = photo.tags.map((tag) => tag.name).join(' · ');
-  $('#photo-dialog').showModal();
+  dialog.showModal();
+  dialog.classList.remove('photo-opening');
+  void dialog.offsetWidth;
+  dialog.classList.add('photo-opening');
+  if (large && !large.url) {
+    const signed = await signedAsset(large);
+    if (signed?.url && dialog.open) {
+      const fullImage = new Image();
+      fullImage.src = signed.url;
+      try { await fullImage.decode(); } catch { return; }
+      if (dialog.open) {
+        large.url = signed.url;
+        dialogImage.src = signed.url;
+      }
+    }
+  }
 }
 
 function edit(photo) {
