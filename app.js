@@ -188,9 +188,10 @@ async function addFiles(files) {
 }
 
 function setAdmin(open) {
+  if (typeof toggleAdminPanel === 'function') return toggleAdminPanel(open);
   $('#admin-panel').classList.toggle('open', open);
   $('#scrim').classList.toggle('show', open);
-  $('#admin-panel').setAttribute('aria-hidden', !open);
+  $('#admin-panel').setAttribute('aria-hidden', String(!open));
 }
 
 $('#admin-button').onclick = () => setAdmin(true);

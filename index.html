@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Un archivo fotográfico personal." />
     <title>Luz & Archivo — Fotografía</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20261019-2" />
   </head>
   <body>
     <header class="masthead">
@@ -100,7 +100,21 @@
       </form>
     </dialog>
     <template id="photo-template"><article class="photo-card"><button class="image-button" type="button"><img loading="lazy" alt="" /></button><div class="photo-meta"><p class="photo-tags"></p><h2></h2><p class="caption"></p><button class="edit-button" type="button">Editar</button></div></article></template>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    <script>
+      // El panel debe poder abrirse aunque Supabase tarde o no esté disponible.
+      const adminPanel = document.getElementById('admin-panel');
+      const adminScrim = document.getElementById('scrim');
+      function toggleAdminPanel(open) {
+        adminPanel.classList.toggle('open', open);
+        adminScrim.classList.toggle('show', open);
+        adminPanel.setAttribute('aria-hidden', String(!open));
+      }
+      document.getElementById('admin-button').addEventListener('click', () => toggleAdminPanel(true));
+      document.getElementById('empty-upload').addEventListener('click', () => toggleAdminPanel(true));
+      document.getElementById('close-admin').addEventListener('click', () => toggleAdminPanel(false));
+      adminScrim.addEventListener('click', () => toggleAdminPanel(false));
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+    <script src="app.js?v=20261019-2"></script>
   </body>
 </html>
