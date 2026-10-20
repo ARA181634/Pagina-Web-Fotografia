@@ -48,6 +48,17 @@
         </div>
         <button class="icon-button" id="close-admin" type="button" aria-label="Cerrar administración">×</button>
       </div>
+      <form id="login-form" class="login-form">
+        <p>Inicia sesión con la cuenta autorizada en Supabase.</p>
+        <label for="login-email">Correo electrónico</label>
+        <input id="login-email" type="email" autocomplete="username" required />
+        <label for="login-password">Contraseña</label>
+        <input id="login-password" type="password" autocomplete="current-password" required />
+        <button class="primary-button" type="submit">Iniciar sesión</button>
+        <p id="login-message" class="status-message" role="status"></p>
+      </form>
+      <div id="owner-tools" class="hidden">
+        <div class="owner-bar"><span>Sesión de administrador</span><button id="sign-out" class="text-button" type="button">Cerrar sesión</button></div>
       <div class="admin-tabs" role="tablist">
         <button class="tab active" data-tab="upload" type="button">Subir</button>
         <button class="tab" data-tab="organize" type="button">Organizar</button>
@@ -69,6 +80,7 @@
         <div id="admin-tags" class="admin-tags"></div>
         <p class="note">Las etiquetas se aplican al editar cada fotografía.</p>
       </section>
+      </div>
     </aside>
     <div class="scrim" id="scrim"></div>
 
@@ -88,6 +100,7 @@
       </form>
     </dialog>
     <template id="photo-template"><article class="photo-card"><button class="image-button" type="button"><img loading="lazy" alt="" /></button><div class="photo-meta"><p class="photo-tags"></p><h2></h2><p class="caption"></p><button class="edit-button" type="button">Editar</button></div></article></template>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>
