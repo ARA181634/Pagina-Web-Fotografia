@@ -2,7 +2,7 @@
 const SUPABASE_URL = 'https://rgkpmsaqbydnpvrqmbzg.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_54CEWH3gizvILUgkRMb0UQ_D4P2s6WG';
 const { createClient } = window.supabase;
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const BUCKET = 'photos';
 const $ = (selector) => document.querySelector(selector);
 let photos = [];
@@ -23,7 +23,7 @@ async function checkOwner(session) {
   let permissionError = null;
   if (session?.user) {
     setSessionStatus(`Sesión iniciada como ${session.user.email}. Comprobando permiso de administrador…`);
-    const { data, error } = await supabase.rpc('is_site_owner');
+    const { data, error } = await supabaseClient.rpc('is_site_owner');
     permissionError = error?.message || null;
     isOwner = !permissionError && data === true;
   }
@@ -49,15 +49,15 @@ async function checkOwner(session) {
 }
 
 async function signedAsset(asset) {
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(asset.object_path, 3600);
+  const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(asset.object_path, 3600);
   if (error) return null;
   return { ...asset, url: data.signedUrl };
 }
 
 async function load() {
   const [photoResult, tagResult] = await Promise.all([
-    supabase.from('photos').select('id,title,caption,is_published,created_at,photo_assets(id,kind,object_path,mime_type,width,height),photo_tags(tag:tags(id,name))').order('created_at', { ascending: false }),
-    supabase.from('tags').select('id,name').order('name')
+    supabaseClient.from('photos').select('id,title,caption,is_published,created_at,photo_assets(id,kind,object_path,mime_type,width,height),photo_tags(tag:tags(id,name))').order('created_at', { ascending: false }),
+    supabaseClient.from('tags').select('id,name').order('name')
   ]);
   if (photoResult.error || tagResult.error) {
     $('#empty-state').hidden = false;
@@ -114,7 +114,7 @@ function renderAdminTags() {
   $('#admin-tags').innerHTML = tags.map((tag) => `<span class="admin-tag">${escapeHtml(tag.name)} <button data-remove-tag="${tag.id}" aria-label="Eliminar ${escapeHtml(tag.name)}">×</button></span>`).join('');
   document.querySelectorAll('[data-remove-tag]').forEach((button) => {
     button.onclick = async () => {
-      const { error } = await supabase.from('tags').delete().eq('id', button.dataset.removeTag);
+      const { error } = await supabaseClient.from('tags').delete().eq('id', button.dataset.removeTag);
       if (error) return showMessage(error.message);
       if (activeTag === button.dataset.removeTag) activeTag = 'all';
       await load();
@@ -178,7 +178,7 @@ async function addFiles(files) {
     const uploadedPaths = [];
     try {
       const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
-      const { data: photo, error: photoError } = await supabase.from('photos').insert({ title, caption: '', is_published: false }).select('id').single();
+      const { data: photo, error: photoError } = await supabaseClient.from('photos').insert({ title, caption: '', is_published: false }).select('id').single();
       if (photoError) throw photoError;
       photoId = photo.id;
       const variants = await makeVariants(file);
@@ -188,19 +188,19 @@ async function addFiles(files) {
       ];
       const assets = [];
       for (const asset of filesToUpload) {
-        const { error } = await supabase.storage.from(BUCKET).upload(asset.path, asset.blob, { contentType: asset.mime, upsert: false });
+        const { error } = await supabaseClient.storage.from(BUCKET).upload(asset.path, asset.blob, { contentType: asset.mime, upsert: false });
         if (error) throw error;
         uploadedPaths.push(asset.path);
         assets.push({ photo_id: photoId, kind: asset.kind, object_path: asset.path, mime_type: asset.mime, width: asset.width, height: asset.height });
       }
-      const { error: assetError } = await supabase.from('photo_assets').insert(assets);
+      const { error: assetError } = await supabaseClient.from('photo_assets').insert(assets);
       if (assetError) throw assetError;
-      const { error: publishError } = await supabase.from('photos').update({ is_published: true }).eq('id', photoId);
+      const { error: publishError } = await supabaseClient.from('photos').update({ is_published: true }).eq('id', photoId);
       if (publishError) throw publishError;
       status.textContent = `Añadida: ${title}`;
     } catch (error) {
-      if (uploadedPaths.length) await supabase.storage.from(BUCKET).remove(uploadedPaths);
-      if (photoId) await supabase.from('photos').delete().eq('id', photoId);
+      if (uploadedPaths.length) await supabaseClient.storage.from(BUCKET).remove(uploadedPaths);
+      if (photoId) await supabaseClient.from('photos').delete().eq('id', photoId);
       status.textContent = `No se pudo subir ${file.name}: ${error.message || 'revisa los permisos y el bucket photos'}`;
     }
   }
@@ -230,13 +230,13 @@ $('#login-form').onsubmit = async (event) => {
   event.preventDefault();
   showMessage('Iniciando sesión…');
   setSessionStatus('Verificando correo y contraseña…');
-  const { error } = await supabase.auth.signInWithPassword({ email: $('#login-email').value.trim(), password: $('#login-password').value });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email: $('#login-email').value.trim(), password: $('#login-password').value });
   if (error) {
     const message = `No se pudo iniciar sesión: ${error.message}`;
     showMessage(message);
     setSessionStatus(message, 'error');
   }
-  else await checkOwner((await supabase.auth.getSession()).data.session);
+  else await checkOwner((await supabaseClient.auth.getSession()).data.session);
 };
 
 $('#forgot-password').onclick = async () => {
@@ -247,7 +247,7 @@ $('#forgot-password').onclick = async () => {
     return;
   }
   showMessage('Enviando correo de recuperación…');
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}${window.location.pathname}`
   });
   showMessage(error ? `No se pudo enviar el correo: ${error.message}` : 'Revisa tu correo. Usa el enlace más reciente para cambiar la contraseña.');
@@ -261,7 +261,7 @@ $('#recovery-form').onsubmit = async (event) => {
     return;
   }
   $('#recovery-message').textContent = 'Guardando contraseña…';
-  const { error } = await supabase.auth.updateUser({ password });
+  const { error } = await supabaseClient.auth.updateUser({ password });
   if (error) {
     $('#recovery-message').textContent = `No se pudo cambiar la contraseña: ${error.message}`;
     return;
@@ -269,17 +269,17 @@ $('#recovery-form').onsubmit = async (event) => {
   isRecoveringPassword = false;
   $('#recovery-message').textContent = '';
   window.history.replaceState({}, document.title, window.location.pathname);
-  await checkOwner((await supabase.auth.getSession()).data.session);
+  await checkOwner((await supabaseClient.auth.getSession()).data.session);
 };
 
-$('#sign-out').onclick = async () => { await supabase.auth.signOut(); await checkOwner(null); };
+$('#sign-out').onclick = async () => { await supabaseClient.auth.signOut(); await checkOwner(null); };
 
 $('#tag-form').onsubmit = async (event) => {
   event.preventDefault();
   const input = $('#new-tag');
   const name = input.value.trim();
   if (!name) return;
-  const { error } = await supabase.from('tags').insert({ name });
+  const { error } = await supabaseClient.from('tags').insert({ name });
   if (error) return showMessage(error.message);
   input.value = '';
   await load();
@@ -296,13 +296,13 @@ $('#edit-close').onclick = () => $('#edit-dialog').close();
 
 $('#edit-form').onsubmit = async (event) => {
   event.preventDefault();
-  const { error } = await supabase.from('photos').update({ title: $('#edit-title').value.trim(), caption: $('#edit-caption').value.trim() }).eq('id', editingId);
+  const { error } = await supabaseClient.from('photos').update({ title: $('#edit-title').value.trim(), caption: $('#edit-caption').value.trim() }).eq('id', editingId);
   if (error) return showMessage(error.message);
   const selectedTagIds = [...document.querySelectorAll('#edit-tags input:checked')].map((input) => input.value);
-  const { error: deleteTagsError } = await supabase.from('photo_tags').delete().eq('photo_id', editingId);
+  const { error: deleteTagsError } = await supabaseClient.from('photo_tags').delete().eq('photo_id', editingId);
   if (deleteTagsError) return showMessage(deleteTagsError.message);
   if (selectedTagIds.length) {
-    const { error: insertTagsError } = await supabase.from('photo_tags').insert(selectedTagIds.map((tag_id) => ({ photo_id: editingId, tag_id })));
+    const { error: insertTagsError } = await supabaseClient.from('photo_tags').insert(selectedTagIds.map((tag_id) => ({ photo_id: editingId, tag_id })));
     if (insertTagsError) return showMessage(insertTagsError.message);
   }
   $('#edit-dialog').close();
@@ -314,20 +314,20 @@ $('#delete-photo').onclick = async () => {
   const photo = photos.find((item) => item.id === editingId);
   const paths = (photo?.photo_assets || []).map((asset) => asset.object_path);
   if (paths.length) {
-    const { error: storageError } = await supabase.storage.from(BUCKET).remove(paths);
+    const { error: storageError } = await supabaseClient.storage.from(BUCKET).remove(paths);
     if (storageError) return showMessage(storageError.message);
   }
-  const { error } = await supabase.from('photos').delete().eq('id', editingId);
+  const { error } = await supabaseClient.from('photos').delete().eq('id', editingId);
   if (error) return showMessage(error.message);
   $('#edit-dialog').close();
   await load();
 };
 
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
     isRecoveringPassword = true;
     setAdmin(true);
   }
   setTimeout(() => checkOwner(session), 0);
 });
-supabase.auth.getSession().then(({ data }) => checkOwner(data.session));
+supabaseClient.auth.getSession().then(({ data }) => checkOwner(data.session));
