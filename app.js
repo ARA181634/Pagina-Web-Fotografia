@@ -10,6 +10,7 @@ let tags = [];
 let activeTag = 'all';
 let editingId = null;
 let isOwner = false;
+let isRecoveringPassword = false;
 
 async function checkOwner(session) {
   isOwner = false;
@@ -20,7 +21,8 @@ async function checkOwner(session) {
     isOwner = !permissionError && data === true;
   }
   document.body.classList.toggle('is-owner', isOwner);
-  $('#login-form').classList.toggle('hidden', isOwner);
+  $('#login-form').classList.toggle('hidden', isOwner || isRecoveringPassword);
+  $('#recovery-form').classList.toggle('hidden', !isRecoveringPassword);
   $('#owner-tools').classList.toggle('hidden', !isOwner);
   if (session?.user && permissionError) $('#login-message').textContent = `La sesión inició, pero Supabase no pudo comprobar permisos: ${permissionError}`;
   else if (session?.user && !isOwner) $('#login-message').textContent = `La sesión inició, pero el UUID ${session.user.id} no está autorizado en site_admins.`;
@@ -214,6 +216,39 @@ $('#login-form').onsubmit = async (event) => {
   else await checkOwner((await supabase.auth.getSession()).data.session);
 };
 
+$('#forgot-password').onclick = async () => {
+  const email = $('#login-email').value.trim();
+  if (!email) {
+    showMessage('Escribe primero el correo de tu cuenta administradora.');
+    $('#login-email').focus();
+    return;
+  }
+  showMessage('Enviando correo de recuperación…');
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}${window.location.pathname}`
+  });
+  showMessage(error ? `No se pudo enviar el correo: ${error.message}` : 'Revisa tu correo. Usa el enlace más reciente para cambiar la contraseña.');
+};
+
+$('#recovery-form').onsubmit = async (event) => {
+  event.preventDefault();
+  const password = $('#recovery-password').value;
+  if (password !== $('#recovery-password-confirm').value) {
+    $('#recovery-message').textContent = 'Las contraseñas no coinciden.';
+    return;
+  }
+  $('#recovery-message').textContent = 'Guardando contraseña…';
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    $('#recovery-message').textContent = `No se pudo cambiar la contraseña: ${error.message}`;
+    return;
+  }
+  isRecoveringPassword = false;
+  $('#recovery-message').textContent = '';
+  window.history.replaceState({}, document.title, window.location.pathname);
+  await checkOwner((await supabase.auth.getSession()).data.session);
+};
+
 $('#sign-out').onclick = async () => { await supabase.auth.signOut(); await checkOwner(null); };
 
 $('#tag-form').onsubmit = async (event) => {
@@ -265,5 +300,11 @@ $('#delete-photo').onclick = async () => {
   await load();
 };
 
-supabase.auth.onAuthStateChange((_event, session) => { setTimeout(() => checkOwner(session), 0); });
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    isRecoveringPassword = true;
+    setAdmin(true);
+  }
+  setTimeout(() => checkOwner(session), 0);
+});
 supabase.auth.getSession().then(({ data }) => checkOwner(data.session));

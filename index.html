@@ -55,7 +55,17 @@
         <label for="login-password">Contraseña</label>
         <input id="login-password" type="password" autocomplete="current-password" required />
         <button class="primary-button" type="submit">Iniciar sesión</button>
+        <button id="forgot-password" class="text-button recovery-button" type="button">Olvidé mi contraseña</button>
         <p id="login-message" class="status-message" role="status"></p>
+      </form>
+      <form id="recovery-form" class="login-form hidden">
+        <p>Escribe una contraseña nueva para tu cuenta administradora.</p>
+        <label for="recovery-password">Contraseña nueva</label>
+        <input id="recovery-password" type="password" autocomplete="new-password" minlength="8" required />
+        <label for="recovery-password-confirm">Confirma la contraseña</label>
+        <input id="recovery-password-confirm" type="password" autocomplete="new-password" minlength="8" required />
+        <button class="primary-button" type="submit">Guardar contraseña</button>
+        <p id="recovery-message" class="status-message" role="status"></p>
       </form>
       <div id="owner-tools" class="hidden">
         <div class="owner-bar"><span>Sesión de administrador</span><button id="sign-out" class="text-button" type="button">Cerrar sesión</button></div>
@@ -115,6 +125,6 @@
       adminScrim.addEventListener('click', () => toggleAdminPanel(false));
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-    <script src="app.js?v=20261019-2"></script>
+    <script src="app.js?v=20261019-3"></script>
   </body>
 </html>
