@@ -22,6 +22,8 @@ El esquema esperado incluye `photos`, `photo_assets`, `tags`, `photo_tags` y `si
 
 El navegador pide URLs firmadas para mostrar derivados del bucket privado. Los originales solo se firman para el dueño.
 
+Si las etiquetas aparecen para el administrador pero no para visitantes, ejecuta `supabase/fix-public-tags.sql` en el SQL Editor. La corrección permite leer los nombres públicos de las etiquetas; la edición continúa reservada al dueño y las relaciones solo son visibles en fotografías publicadas.
+
 ## Formatos
 
 Para la web, **AVIF** suele proporcionar la mejor compresión/calidad; **WebP** es la opción más compatible y práctica para derivados. Conserva el original (RAW/TIFF/JPEG) fuera del navegador como archivo maestro y publica derivados AVIF/WebP. Esta versión genera WebP porque el navegador puede codificarlo de forma fiable.
