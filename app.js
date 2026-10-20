@@ -13,14 +13,17 @@ let isOwner = false;
 
 async function checkOwner(session) {
   isOwner = false;
+  let permissionError = null;
   if (session?.user) {
     const { data, error } = await supabase.rpc('is_site_owner');
-    isOwner = !error && data === true;
+    permissionError = error?.message || null;
+    isOwner = !permissionError && data === true;
   }
   document.body.classList.toggle('is-owner', isOwner);
   $('#login-form').classList.toggle('hidden', isOwner);
   $('#owner-tools').classList.toggle('hidden', !isOwner);
-  if (session?.user && !isOwner) $('#login-message').textContent = 'Esta cuenta no tiene permisos de administrador.';
+  if (session?.user && permissionError) $('#login-message').textContent = `La sesión inició, pero Supabase no pudo comprobar permisos: ${permissionError}`;
+  else if (session?.user && !isOwner) $('#login-message').textContent = `La sesión inició, pero el UUID ${session.user.id} no está autorizado en site_admins.`;
   if (isOwner) $('#login-message').textContent = '';
   await load();
 }
@@ -206,7 +209,7 @@ $('#login-form').onsubmit = async (event) => {
   event.preventDefault();
   showMessage('Iniciando sesión…');
   const { error } = await supabase.auth.signInWithPassword({ email: $('#login-email').value.trim(), password: $('#login-password').value });
-  if (error) showMessage('No se pudo iniciar sesión. Revisa el correo y la contraseña de tu usuario Supabase.');
+  if (error) showMessage(`No se pudo iniciar sesión: ${error.message}`);
   else await checkOwner((await supabase.auth.getSession()).data.session);
 };
 
