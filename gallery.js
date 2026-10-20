@@ -65,6 +65,30 @@ async function signedAsset(asset) {
   return { ...asset, url: data.signedUrl };
 }
 
+async function signAssetsInBatch(assets) {
+  const uniqueAssets = [...new Map(assets.map((asset) => [asset.object_path, asset])).values()];
+  const resolved = new Map();
+  const missing = [];
+  uniqueAssets.forEach((asset) => {
+    const cached = assetUrlCache.get(asset.object_path);
+    if (cached && cached.expiresAt > Date.now()) resolved.set(asset.object_path, cached.url);
+    else missing.push(asset);
+  });
+  if (missing.length) {
+    const paths = missing.map((asset) => asset.object_path);
+    const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
+    if (!error) {
+      (data || []).forEach((item, index) => {
+        if (!item.signedUrl) return;
+        const path = item.path || paths[index];
+        resolved.set(path, item.signedUrl);
+        assetUrlCache.set(path, { url: item.signedUrl, expiresAt: Date.now() + SIGNED_URL_CACHE_MS });
+      });
+    }
+  }
+  return uniqueAssets.map((asset) => ({ ...asset, url: resolved.get(asset.object_path) || null }));
+}
+
 async function load() {
   const [photoResult, tagResult] = await Promise.all([
     supabaseClient.from('photos').select('id,title,caption,is_published,created_at,photo_assets(id,kind,object_path,mime_type,width,height),photo_tags(tag:tags(id,name))').order('created_at', { ascending: false }),
@@ -77,15 +101,17 @@ async function load() {
     return;
   }
   tags = tagResult.data || [];
-  photos = await Promise.all((photoResult.data || []).map(async (photo) => {
-    const assets = await Promise.all((photo.photo_assets || []).filter((asset) => asset.kind !== 'original').map(signedAsset));
-    const original = isOwner ? await Promise.all((photo.photo_assets || []).filter((asset) => asset.kind === 'original').map(signedAsset)) : [];
-    return {
-      ...photo,
-      tags: (photo.photo_tags || []).map((entry) => entry.tag).filter(Boolean),
-      assets: assets.filter(Boolean),
-      original: original.find(Boolean)?.url || null
-    };
+  const rawPhotos = photoResult.data || [];
+  const galleryAssets = rawPhotos.map((photo) => {
+    const derivatives = (photo.photo_assets || []).filter((asset) => asset.kind !== 'original');
+    return derivatives.find((asset) => asset.kind === 'medium') || derivatives.find((asset) => asset.kind === 'thumbnail') || derivatives.find((asset) => asset.kind === 'large');
+  }).filter(Boolean);
+  const signedGalleryAssets = await signAssetsInBatch(galleryAssets);
+  const galleryUrls = new Map(signedGalleryAssets.map((asset) => [asset.object_path, asset.url]));
+  photos = rawPhotos.map((photo) => ({
+    ...photo,
+    tags: (photo.photo_tags || []).map((entry) => entry.tag).filter(Boolean),
+    assets: (photo.photo_assets || []).map((asset) => ({ ...asset, url: galleryUrls.get(asset.object_path) || null }))
   }));
   render();
 }
@@ -137,8 +163,15 @@ function showMessage(message) {
   $('#login-message').textContent = message || '';
 }
 
-function openPhoto(photo) {
-  $('#dialog-image').src = photo.assets.find((asset) => asset.kind === 'large')?.url || photo.assets.find((asset) => asset.kind === 'medium')?.url || '';
+async function openPhoto(photo) {
+  const preferred = photo.assets.find((asset) => asset.kind === 'large') || photo.assets.find((asset) => asset.kind === 'medium');
+  let imageUrl = preferred?.url || '';
+  if (preferred && !imageUrl) {
+    const signed = await signedAsset(preferred);
+    imageUrl = signed?.url || '';
+    if (imageUrl) preferred.url = imageUrl;
+  }
+  $('#dialog-image').src = imageUrl;
   $('#dialog-image').alt = photo.title;
   $('#dialog-title').textContent = photo.title;
   $('#dialog-caption').textContent = photo.caption;

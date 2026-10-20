@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Un archivo fotográfico personal." />
     <title>Luz & Archivo — Fotografía</title>
+    <link rel="preconnect" href="https://rgkpmsaqbydnpvrqmbzg.supabase.co" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="stylesheet" href="styles.css?v=20261019-2" />
   </head>
   <body>
@@ -110,7 +112,7 @@
         <div class="edit-actions"><button type="button" id="delete-photo" class="danger-button">Eliminar</button><button type="submit" class="primary-button">Guardar cambios</button></div>
       </form>
     </dialog>
-    <template id="photo-template"><article class="photo-card"><button class="image-button" type="button"><img loading="lazy" alt="" /></button><div class="photo-meta"><p class="photo-tags"></p><h2></h2><p class="caption"></p><button class="edit-button" type="button">Editar</button></div></article></template>
+    <template id="photo-template"><article class="photo-card"><button class="image-button" type="button"><img loading="lazy" decoding="async" alt="" /></button><div class="photo-meta"><p class="photo-tags"></p><h2></h2><p class="caption"></p><button class="edit-button" type="button">Editar</button></div></article></template>
     <script>
       // El panel debe poder abrirse aunque Supabase tarde o no esté disponible.
       const adminPanel = document.getElementById('admin-panel');
@@ -141,6 +143,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" onerror="document.getElementById('admin-session-status').textContent='No se pudo cargar la biblioteca de Supabase desde cdn.jsdelivr.net.'"></script>
-    <script src="gallery.js?v=20261019-7"></script>
+    <script src="gallery.js?v=20261019-8"></script>
   </body>
 </html>
