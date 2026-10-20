@@ -330,4 +330,9 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   }
   setTimeout(() => checkOwner(session), 0);
 });
-supabaseClient.auth.getSession().then(({ data }) => checkOwner(data.session));
+supabaseClient.auth.getSession()
+  .then(({ data, error }) => {
+    if (error) throw error;
+    return checkOwner(data.session);
+  })
+  .catch((error) => setSessionStatus(`No se pudo comprobar la sesión: ${error.message}`, 'error'));

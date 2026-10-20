@@ -16,7 +16,7 @@ En **Administrar** el dueño puede subir imágenes, crear etiquetas y editar/eli
 
 ## Supabase
 
-La app se conecta al proyecto configurado en `app.js` con su URL y clave publishable. La clave publishable es pública y está protegida por las políticas RLS de la base; nunca pongas una clave `secret` o `service_role` en el navegador.
+La app se conecta al proyecto configurado en `gallery.js` con su URL y clave publishable. La clave publishable es pública y está protegida por las políticas RLS de la base; nunca pongas una clave `secret` o `service_role` en el navegador.
 
 El esquema esperado incluye `photos`, `photo_assets`, `tags`, `photo_tags` y `site_admins`, la función `is_site_owner()`, sus políticas RLS y el bucket privado `photos`. Ejecuta el SQL de configuración en el SQL Editor de Supabase y agrega a `site_admins` el UUID del usuario dueño. En **Authentication → Settings**, desactiva los registros públicos y conserva solo las cuentas que autorices. El usuario dueño debe tener una contraseña configurada para iniciar sesión.
 

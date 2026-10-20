@@ -48,7 +48,7 @@
         </div>
         <button class="icon-button" id="close-admin" type="button" aria-label="Cerrar administración">×</button>
       </div>
-      <div id="admin-session-status" class="session-status" role="status">Comprobando sesión…</div>
+      <div id="admin-session-status" class="session-status" role="status">Cargando administrador… (versión 20261019-6)</div>
       <form id="login-form" class="login-form">
         <p>Inicia sesión con la cuenta autorizada en Supabase.</p>
         <label for="login-email">Correo electrónico</label>
@@ -115,6 +115,15 @@
       // El panel debe poder abrirse aunque Supabase tarde o no esté disponible.
       const adminPanel = document.getElementById('admin-panel');
       const adminScrim = document.getElementById('scrim');
+      const adminStatus = document.getElementById('admin-session-status');
+      window.addEventListener('error', (event) => {
+        adminStatus.className = 'session-status error';
+        adminStatus.textContent = `Error al cargar el administrador: ${event.message || 'archivo no disponible'}`;
+      });
+      window.addEventListener('unhandledrejection', (event) => {
+        adminStatus.className = 'session-status error';
+        adminStatus.textContent = `Error de conexión: ${event.reason?.message || event.reason || 'respuesta no disponible'}`;
+      });
       function toggleAdminPanel(open) {
         adminPanel.classList.toggle('open', open);
         adminScrim.classList.toggle('show', open);
@@ -132,6 +141,6 @@
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" onerror="document.getElementById('admin-session-status').textContent='No se pudo cargar la biblioteca de Supabase desde cdn.jsdelivr.net.'"></script>
-    <script src="app.js?v=20261019-5"></script>
+    <script src="gallery.js?v=20261019-6"></script>
   </body>
 </html>
