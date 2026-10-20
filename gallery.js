@@ -14,6 +14,7 @@ let isRecoveringPassword = false;
 const assetUrlCache = new Map();
 const SIGNED_URL_TTL_SECONDS = 3600;
 const SIGNED_URL_CACHE_MS = 50 * 60 * 1000;
+let qualityObserver = null;
 
 function setSessionStatus(message, type = '') {
   const element = $('#admin-session-status');
@@ -102,9 +103,11 @@ async function load() {
   }
   tags = tagResult.data || [];
   const rawPhotos = photoResult.data || [];
-  const galleryAssets = rawPhotos.map((photo) => {
+  const galleryAssets = rawPhotos.flatMap((photo) => {
     const derivatives = (photo.photo_assets || []).filter((asset) => asset.kind !== 'original');
-    return derivatives.find((asset) => asset.kind === 'medium') || derivatives.find((asset) => asset.kind === 'thumbnail') || derivatives.find((asset) => asset.kind === 'large');
+    const thumbnail = derivatives.find((asset) => asset.kind === 'thumbnail');
+    const medium = derivatives.find((asset) => asset.kind === 'medium');
+    return [thumbnail || medium || derivatives.find((asset) => asset.kind === 'large'), medium].filter(Boolean);
   }).filter(Boolean);
   const signedGalleryAssets = await signAssetsInBatch(galleryAssets);
   const galleryUrls = new Map(signedGalleryAssets.map((asset) => [asset.object_path, asset.url]));
@@ -128,13 +131,30 @@ function render() {
   }
   const gallery = $('#gallery');
   gallery.innerHTML = '';
-  visible.forEach((photo) => {
+  qualityObserver?.disconnect();
+  qualityObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(async (entry) => {
+      if (!entry.isIntersecting) return;
+      observer.unobserve(entry.target);
+      const fullUrl = entry.target.dataset.qualitySrc;
+      if (!fullUrl || entry.target.src === fullUrl) return;
+      const fullImage = new Image();
+      fullImage.src = fullUrl;
+      try { await fullImage.decode(); } catch { return; }
+      if (entry.target.isConnected) entry.target.src = fullUrl;
+    });
+  }, { rootMargin: '500px 0px' });
+  visible.forEach((photo, index) => {
     const template = $('#photo-template').content.cloneNode(true);
     const card = template.querySelector('.photo-card');
     const image = template.querySelector('img');
-    const displayAsset = photo.assets.find((asset) => asset.kind === 'medium' && asset.url) || photo.assets.find((asset) => asset.url);
+    const thumbnail = photo.assets.find((asset) => asset.kind === 'thumbnail' && asset.url);
+    const medium = photo.assets.find((asset) => asset.kind === 'medium' && asset.url);
+    const displayAsset = thumbnail || medium || photo.assets.find((asset) => asset.url);
     card.classList.add('is-loading');
     if (displayAsset?.width && displayAsset?.height) image.style.aspectRatio = `${displayAsset.width} / ${displayAsset.height}`;
+    if (index < 4) image.loading = 'eager';
+    if (index < 2) image.fetchPriority = 'high';
     const finishLoading = () => card.classList.remove('is-loading');
     image.addEventListener('load', finishLoading, { once: true });
     image.addEventListener('error', finishLoading, { once: true });
@@ -147,6 +167,10 @@ function render() {
     template.querySelector('.image-button').onclick = () => openPhoto(photo);
     template.querySelector('.edit-button').onclick = () => edit(photo);
     gallery.append(template);
+    if (medium?.url && medium.url !== displayAsset?.url) {
+      image.dataset.qualitySrc = medium.url;
+      qualityObserver.observe(image);
+    }
   });
   renderAdminTags();
 }
