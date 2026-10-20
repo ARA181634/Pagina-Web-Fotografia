@@ -11,6 +11,9 @@ let activeTag = 'all';
 let editingId = null;
 let isOwner = false;
 let isRecoveringPassword = false;
+const assetUrlCache = new Map();
+const SIGNED_URL_TTL_SECONDS = 3600;
+const SIGNED_URL_CACHE_MS = 50 * 60 * 1000;
 
 function setSessionStatus(message, type = '') {
   const element = $('#admin-session-status');
@@ -49,8 +52,16 @@ async function checkOwner(session) {
 }
 
 async function signedAsset(asset) {
-  const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(asset.object_path, 3600);
+  const cached = assetUrlCache.get(asset.object_path);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { ...asset, url: cached.url };
+  }
+  const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(asset.object_path, SIGNED_URL_TTL_SECONDS);
   if (error) return null;
+  assetUrlCache.set(asset.object_path, {
+    url: data.signedUrl,
+    expiresAt: Date.now() + SIGNED_URL_CACHE_MS
+  });
   return { ...asset, url: data.signedUrl };
 }
 
@@ -191,6 +202,7 @@ async function addFiles(files) {
         const { error } = await supabaseClient.storage.from(BUCKET).upload(asset.path, asset.blob, { contentType: asset.mime, upsert: false });
         if (error) throw error;
         uploadedPaths.push(asset.path);
+        assetUrlCache.delete(asset.path);
         assets.push({ photo_id: photoId, kind: asset.kind, object_path: asset.path, mime_type: asset.mime, width: asset.width, height: asset.height });
       }
       const { error: assetError } = await supabaseClient.from('photo_assets').insert(assets);
@@ -316,6 +328,7 @@ $('#delete-photo').onclick = async () => {
   if (paths.length) {
     const { error: storageError } = await supabaseClient.storage.from(BUCKET).remove(paths);
     if (storageError) return showMessage(storageError.message);
+    paths.forEach((path) => assetUrlCache.delete(path));
   }
   const { error } = await supabaseClient.from('photos').delete().eq('id', editingId);
   if (error) return showMessage(error.message);
